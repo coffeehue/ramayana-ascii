@@ -11,15 +11,13 @@ import diwali_ramayana_record_v3 as portrait
 
 
 SIZE = (1080, 1920)
-INTRO_DURATION = 2
-DURATION = INTRO_DURATION + movie.DURATION
+DURATION = portrait.DURATION
 PREVIEW_FPS = 30
 ART_TOP = 396
 ART_SIZE = (SIZE[0], round(portrait.H * SIZE[0] / portrait.W))
 INK = (4, 6, 12)
 GOLD = (245, 199, 121)
 PAPER = (237, 230, 216)
-INTRO_BRIGHTNESS = tuple(round(value + .16 * value * (1 - value / 255)) for value in range(256)) * 3
 
 
 @lru_cache(maxsize=None)
@@ -35,53 +33,19 @@ def centered(draw, text, y, font, fill):
               stroke_width=2, stroke_fill=INK)
 
 
-def smooth(progress):
-    progress = max(0, min(1, progress))
-    return progress * progress * (3 - 2 * progress)
-
-
-def intro_mask():
-    width, height = ART_SIZE
-    strip = Image.new("L", (1, height))
-    strip.putdata([round(255 * smooth(y / 78) * smooth((height - 1 - y) / 112))
-                   for y in range(height)])
-    return strip.resize((width, height))
-
-
 class Reel:
     def __init__(self):
-        self.intro_scene = movie.Ramayana()
         self.scene = portrait.Ramayana()
-        self.intro_mask = intro_mask()
         self.plate = Image.new("RGB", SIZE, INK)
         draw = ImageDraw.Draw(self.plate)
         centered(draw, "D I W A L I", 214, movie.mono(30), GOLD)
         centered(draw, "A Festival of Light", 254, title_font(58), GOLD)
 
-    def intro(self, time):
-        progress = smooth(time / INTRO_DURATION)
-        source = self.intro_scene.frame(4.03 + .12 * progress)
-        width = 610 - 85 * progress
-        height = width * ART_SIZE[1] / ART_SIZE[0]
-        left, top = 960 - width / 2, 475 - height / 2
-        crop = (left, top, left + width, top + height)
-        art = source.resize(ART_SIZE, Image.Resampling.LANCZOS, box=crop).point(INTRO_BRIGHTNESS)
-        frame = Image.new("RGB", SIZE, INK)
-        frame.paste(art, (0, 400), self.intro_mask)
-        draw = ImageDraw.Draw(frame)
-        centered(draw, "I animated the", 214, title_font(70), PAPER)
-        centered(draw, "Ramayana in Python", 303, title_font(76), GOLD)
-        return frame
-
     def frame(self, time):
-        if time < INTRO_DURATION:
-            return self.intro(time)
-
-        story_time = time - INTRO_DURATION
-        art = self.scene.frame(story_time).resize(ART_SIZE, Image.Resampling.LANCZOS)
+        art = self.scene.frame(time).resize(ART_SIZE, Image.Resampling.LANCZOS)
         frame = self.plate.copy()
         frame.paste(art, (0, ART_TOP))
-        label = movie.chapter(story_time).replace("Ayodhya Lights Up for Rama", "Ayodhya Lights Up for Lord Rama")
+        label = movie.chapter(time).replace("Ayodhya Lights Up for Rama", "Ayodhya Lights Up for Lord Rama")
         if label:
             centered(ImageDraw.Draw(frame), label, 338, title_font(34), PAPER)
         return frame
